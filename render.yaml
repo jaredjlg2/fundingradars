@@ -1,0 +1,44 @@
+services:
+  - type: web
+    name: fundingradars-web
+    env: node
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npm start
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: fundingradars-db
+          property: connectionString
+      - key: ADMIN_SECRET
+        generateValue: true
+      - key: NODE_ENV
+        value: production
+
+  - type: cron
+    name: sync-opportunities
+    env: node
+    schedule: "0 */6 * * *"
+    buildCommand: npm install && npx prisma generate
+    startCommand: npm run jobs:sync
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: fundingradars-db
+          property: connectionString
+
+  - type: cron
+    name: send-weekly-digests
+    env: node
+    schedule: "0 8 * * 1-5"
+    buildCommand: npm install && npx prisma generate
+    startCommand: npm run jobs:digest
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: fundingradars-db
+          property: connectionString
+
+databases:
+  - name: fundingradars-db
+    databaseName: fundingradars
+    plan: free

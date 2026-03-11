@@ -1,0 +1,136 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Customer {
+  id                    String    @id @default(uuid())
+  organizationName      String
+  contactName           String
+  email                 String
+  customerType          String    @default("BUSINESS")
+  keywordsInclude       String[]
+  keywordsExclude       String[]
+  naicsCodes            String[]
+  agenciesOfInterest    String[]
+  locationsOfInterest   String[]
+  setAsidePreferences   String[]
+  minAwardAmount        Float?
+  maxAwardAmount        Float?
+  dueDateMinDaysOut     Int?
+  dueDateMaxDaysOut     Int?
+  activeStatus          Boolean   @default(true)
+  weeklyDigestEnabled   Boolean   @default(true)
+  weeklyDigestDay       Int       @default(1)
+  timezone              String    @default("America/New_York")
+  notes                 String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  matches     OpportunityMatch[]
+  digests     EmailDigest[]
+}
+
+model Opportunity {
+  id                  String    @id @default(uuid())
+  sourceType          String
+  sourceId            String
+  title               String
+  agencyName          String?
+  agencyCode          String?
+  noticeType          String?
+  description         String?
+  eligibilityText     String?
+  naicsCodes          String[]
+  setAsideType        String?
+  placeOfPerformance  String?
+  postedDate          DateTime?
+  responseDate        DateTime?
+  awardFloor          Float?
+  awardCeiling        Float?
+  url                 String?
+  rawJson             Json
+  lastSeenAt          DateTime
+  isActive            Boolean   @default(true)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@unique([sourceType, sourceId])
+
+  matches       OpportunityMatch[]
+  digestItems   EmailDigestItem[]
+}
+
+model OpportunityMatch {
+  id               String    @id @default(uuid())
+  customerId       String
+  opportunityId    String
+  totalScore       Float
+  matchReasons     String[]
+  rejectionReasons String[]
+  explanationJson  Json
+  matchedAt        DateTime  @default(now())
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([customerId, opportunityId])
+
+  customer     Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  opportunity  Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+}
+
+model EmailDigest {
+  id           String    @id @default(uuid())
+  customerId   String
+  periodStart  DateTime
+  periodEnd    DateTime
+  subject      String
+  status       String
+  sentAt       DateTime?
+  errorMessage String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([customerId, periodStart, periodEnd])
+
+  customer Customer         @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  items    EmailDigestItem[]
+}
+
+model EmailDigestItem {
+  id            String   @id @default(uuid())
+  emailDigestId String
+  opportunityId String
+  scoreAtSend   Float
+  createdAt     DateTime @default(now())
+
+  digest      EmailDigest @relation(fields: [emailDigestId], references: [id], onDelete: Cascade)
+  opportunity Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+}
+
+model SyncRun {
+  id                 String    @id @default(uuid())
+  sourceType         String
+  jobType            String
+  status             String
+  recordsFetched     Int       @default(0)
+  recordsInserted    Int       @default(0)
+  recordsUpdated     Int       @default(0)
+  recordsDeactivated Int       @default(0)
+  startedAt          DateTime
+  finishedAt         DateTime?
+  errorMessage       String?
+  metadataJson       Json?
+}
+
+model AppSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  valueJson Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
