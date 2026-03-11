@@ -3,11 +3,12 @@ import { prisma } from '@/lib/db';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
-export default async function CustomerDetailPage({ params }: { params: { id: string } }) {
-  const customer = await prisma.customer.findUnique({ where: { id: params.id } }).catch(() => null);
+export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const customer = await prisma.customer.findUnique({ where: { id } }).catch(() => null);
   if (!customer) notFound();
   const matches = await prisma.opportunityMatch.findMany({
-    where: { customerId: params.id, totalScore: { gte: 50 } },
+    where: { customerId: id, totalScore: { gte: 50 } },
     include: { opportunity: true },
     orderBy: { totalScore: 'desc' },
     take: 10,
